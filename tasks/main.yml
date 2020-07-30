@@ -1,0 +1,112 @@
+---
+# tasks file for ocp-3.11-containers
+- name: Pre-check variables are set
+  fail:
+    msg: >
+      This role requires content_sync_path, registry_password and registry_username
+      to be set within the inventory.
+      See README for ocp-3.11-containers role for more information.
+  when:
+    - content_sync_path is not defined
+    - registry_password is not defined
+    - registry_username is not defined
+
+- name: Create images directory
+  file:
+    mode: '0755'
+    path: "{{ content_sync_path }}/OCP/images"
+    recurse: no
+    state: directory
+
+- name: RHSM subscribe
+  include_tasks: rhel-subscribe.yml
+  when:
+    - ansible_distribution == 'RedHat'
+
+- name: Install podman
+  yum:
+    name:
+      - podman
+    state: latest
+
+- name: Create images datastore
+  become: true
+  file:
+    mode: '0755'
+    path: "{{ content_sync_path }}/containers/storage"
+    state: directory
+    recurse: no
+
+- name: Change location of datastore
+  lineinfile:
+    path: /etc/containers/storage.conf
+    regexp: 'graphroot'
+    line: "graphroot = \"{{ content_sync_path }}/containers/storage\""
+
+- name: Find previous content-sync repo
+  find:
+    paths: "{{ content_sync_path }}/OCP/images"
+    patterns: "*.tar"
+  register: images_to_delete
+
+- name: Delete old image tarballs
+  become: true
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ images_to_delete.files }}"
+
+- name: Login to registry
+  become: true
+  shell: >
+    podman login registry.redhat.io \
+      -u '{{ registry_username }}' \
+      -p $REGISTRY_PASSWORD
+  environment:
+    REGISTRY_PASSWORD: "{{ registry_password }}"
+  when:
+    - "'credential' in registry_authtype"
+
+- name: Login to registry
+  become: true
+  shell: >
+    podman login registry.redhat.io \
+      --authfile {{ registry_authfile_path }}
+  no_log: true
+  when:
+    - "'config' in registry_authtype"
+
+- name: Pull OCP 3.11 Images
+  become: true
+  shell: >
+    podman pull {{ item }}
+    while [ "$?" != "0" ]; do 
+      sleep 30
+      podman login registry.redhat.io \
+        -u '{{ registry_username }}'
+        -p $REGISTRY_PASSWORD
+      podman pull {{ item }}
+      if [ "$?" = "0" ]; then 
+        exit 0
+      fi
+    done
+  loop: "{{ containers_pull }}"
+  environment:
+    REGISTRY_PASSWORD: "{{ registry_password }}"
+  
+- name: Save OCP 3.11 Images to content-sync repo
+  become: true
+  shell: >
+    podman save -o {{ content_sync_path }}/OCP/images/{{ item | regex_replace(':|.', '-').split('/')[-1] }}.tar \
+      {{ item }}
+  with_items: "{{ containers_pull }}"
+
+- name: Cleanup images
+  become: true
+  podman_image:
+    name: "{{ item }}" 
+    state: absent
+  with_items: "{{ containers_pull }}"
+  tags:
+    - never
+    - cleanup

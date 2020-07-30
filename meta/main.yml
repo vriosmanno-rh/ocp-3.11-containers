@@ -2,7 +2,7 @@ galaxy_info:
   author: Red Hat Consulting
   description: Role to pull OpenShift 3.11 related containers to deploy in disconnected environments
   company: Red Hat, Inc.
-  issue_tracker_url: https://github.com/vriosmanno-rh/openscap-pull/issues
+  issue_tracker_url: https://github.com/vriosmanno-rh/ocp-3.11-containers/issues
   license: license (GPL-2.0-or-later)
   min_ansible_version: 2.4
   platforms:

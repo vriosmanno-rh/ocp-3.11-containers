@@ -15,7 +15,7 @@ Role Variables
 --------------
 
 | Parameter | Type | Required | Default Value | Comments |
-| --- | --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | **additional_containers** | list | no | *undefined* | List of additional containers to pull into the content_sync |
 | **containers_pull** | list | yes | *see role defaults* | List of containers required to run OCP 3.11, see [disconnected_install](https://docs.openshift.com/container-platform/3.11/install/disconnected_install.html) |
 | **content_sync_path** | string | yes | `/data` | The destination path for the openscap OVAL definitions |
@@ -26,7 +26,7 @@ Role Variables
 
 ### If Running on a RHEL System these variables handle connecting to RHSM to install Podman
 | Parameter | Type | Required | Default Value | Comments |
-| --- | --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | **rhsm_user** | string | no | *undefined* | The account username with access to subscriptions on https://access.redhat.com, **required only when running from a RHEL system** |
 | **rhsm_password** | string | no | *undefined* | The account password with access to subscriptions on https://access.redhat.com, **required only when running from a RHEL system** |
 | **rhsm_pool** | string | no | *undefined* | The subscription pool IDs to consume that contain OCP 3.11. (ex. `0123456789abcdef0123456789abcdef`), **only when running from a RHEL system** |
